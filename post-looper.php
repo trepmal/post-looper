@@ -20,10 +20,21 @@ class Post_Looper {
 	var $textdomain = 'post-looper';
 
 	function __construct() {
+		add_action( 'admin_enqueue_scripts', array( &$this, 'admin_enqueue_scripts' ) );
 		add_action( 'admin_menu', array( &$this, 'menu' ) );
 		add_action( 'wp_ajax_pl_loop', array( &$this, 'loop' ) );
 	}
 
+	function admin_enqueue_scripts( $hook ) {
+		echo "<!--hook: $hook -->";
+		if ( 'settings_page_Post_Looper' != $hook ) return;
+		wp_enqueue_script( 'codemirror', plugins_url( 'codemirror/codemirror.js', __FILE__ ), array(), 3.13 );
+		wp_enqueue_script( 'codemirror-clike', plugins_url( 'codemirror/mode/clike.js', __FILE__ ), array('codemirror'), 3.13 );
+		wp_enqueue_script( 'codemirror-css', plugins_url( 'codemirror/mode/css.js', __FILE__ ), array('codemirror'), 3.13 );
+		wp_enqueue_script( 'codemirror-js', plugins_url( 'codemirror/mode/javascript.js', __FILE__ ), array('codemirror'), 3.13 );
+		wp_enqueue_script( 'codemirror-php', plugins_url( 'codemirror/mode/php.js', __FILE__ ), array('codemirror'), 3.13 );
+		wp_enqueue_style( 'codemirror', plugins_url( 'codemirror/codemirror.css', __FILE__ ) );
+	}
 	function menu() {
 		add_options_page( __( 'Post Looper', $this->textdomain ), __( 'Post Looper', $this->textdomain ), 'manage_options', __CLASS__, array( &$this, 'page' ) );
 	}
@@ -85,6 +96,16 @@ class Post_Looper {
 
 	function admin_footer() {
 		?><script>
+      var editor = CodeMirror.fromTextArea(document.getElementById("pl-command"), {
+        lineNumbers: true,
+        matchBrackets: true,
+        mode: "application/x-httpd-php",
+        indentUnit: 4,
+        indentWithTabs: true,
+        enterMode: "keep",
+        tabMode: "shift"
+      });
+
 		jQuery(document).ready(function($){
 			var $pl_submit = $('#pl-submit'),
 				$pl_pause = $('#pl-pause'),
@@ -145,7 +166,8 @@ class Post_Looper {
 					post_status: $('#pl-post-status').val(),
 					posts_per_loop: $('#pl-ppl').val(),
 					last_id: pl_status.last_id,
-					command: $('#pl-command').val(),
+					// command: $('#pl-command').val(),
+					command: editor.getValue(),
 					nonce: '<?php echo wp_create_nonce('post-looper'); ?>'
 				}, function( response ){
 					$pl_response.val( $pl_response.val() + response.result);
@@ -166,6 +188,7 @@ class Post_Looper {
 						if ( ! pl_status.pause )
 							$pl_submit.click();
 					} else {
+						pl_pause();
 						$pl_submit.prop('disabled', 'disabled');
 					}
 				},'json');
@@ -227,11 +250,11 @@ class Post_Looper {
 			$post = get_post( $sql_row->id );
 			setup_postdata( $post );
 			ob_start();
-			echo '----------------------------------'."\n";
+			echo '=================================='."\n";
 			echo '['; the_ID(); echo '] '; the_title(); echo "\n";
 			echo '----------------------------------'."\n";
 			$command = $this->loop_command( $_POST['command'] );
-			$command_result .= ob_get_clean() ."\n";
+			$command_result .= ob_get_clean() ."\n\n";
 			wp_reset_postdata();
 		}
 
