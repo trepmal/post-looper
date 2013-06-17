@@ -142,7 +142,8 @@ class Post_Looper {
 					post_type: $('#pl-post-type').val(),
 					post_status: $('#pl-post-status').val(),
 					last_id: pl_status.last_id,
-					command: $('#pl-command').val()
+					command: $('#pl-command').val(),
+					nonce: '<?php echo wp_create_nonce('post-looper'); ?>'
 				}, function( response ){
 					$pl_response.val( $pl_response.val() + response.result + "\n");
 
@@ -155,7 +156,7 @@ class Post_Looper {
 					$pl_response.scrollTop(
 						$pl_response[0].scrollHeight - $pl_response.height()
 					);
-					// console.log( typeof response.next_post );
+					// console.log( response );
 
 					if ( response.next_post ) {
 						pl_status.last_id = response.next_post;
@@ -164,7 +165,7 @@ class Post_Looper {
 					} else {
 						$pl_submit.prop('disabled', 'disabled');
 					}
-				}, 'json' );
+				},'json');
 			});
 
 			$pl_clear.click( function(ev) {
@@ -177,6 +178,8 @@ class Post_Looper {
 	}
 
 	function loop() {
+		if ( ! check_ajax_referer( 'post-looper', 'nonce', false ) )
+			$this->json_die( false, __( 'Not allowed', $this->textdomain ) );
 		$post_type = $_POST['post_type'];
 		if ( empty( $post_type ) ) $this->json_die( false, __( 'No post type selected', $this->textdomain ) );
 		if ( ! post_type_exists( $post_type ) && $post_type != 'any' ) $this->json_die( false, __( 'Invalid post type selected', $this->textdomain ) );
