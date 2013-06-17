@@ -61,7 +61,9 @@ class Post_Looper {
 			// echo "<option value='asdf'>asdf</option>";
 			echo '</select>';
 		}
-		echo '</label></p>';
+		echo '</label>';
+		echo ' <label>'. __( 'Posts per loop:', $this->textdomain ) .'<input type="number" id="pl-ppl" class="small-text" value="10" /></label>';
+		echo '</p>';
 		?>
 		<label for="pl-command"><?php _e( 'Command (runs inside the loop):', $this->textdomain ); ?></label>
 		<textarea id="pl-command" class="large-text" rows="5">&lt;?php</textarea>
@@ -77,7 +79,7 @@ class Post_Looper {
 		</form>
 		<?php _e( 'Output:', $this->textdomain ); ?>
 		<textarea id="pl-command-return" class="large-text" rows="2" readonly="readonly" style="background: #555;color: #f3f3f3;font-family: courier;font-size: 13px;"></textarea>
-		<?php submit_button( __( 'Clear', $this->textdomain ), 'small', 'pl-clear' ); ?>
+		<?php submit_button( __( 'Clear output log', $this->textdomain ), 'small', 'pl-clear' ); ?>
 		</div><?php
 	}
 
@@ -141,11 +143,12 @@ class Post_Looper {
 					action: 'pl_loop',
 					post_type: $('#pl-post-type').val(),
 					post_status: $('#pl-post-status').val(),
+					posts_per_loop: $('#pl-ppl').val(),
 					last_id: pl_status.last_id,
 					command: $('#pl-command').val(),
 					nonce: '<?php echo wp_create_nonce('post-looper'); ?>'
 				}, function( response ){
-					$pl_response.val( $pl_response.val() + response.result + "\n");
+					$pl_response.val( $pl_response.val() + response.result);
 
 					// increase textarea height
 					rows = parseInt( $pl_response.attr('rows') );
@@ -186,51 +189,53 @@ class Post_Looper {
 
 		$post_status = esc_attr( $_POST['post_status'] );
 		$last_id = empty( $_POST['last_id'] ) ? 0 : $_POST['last_id'];
+		$ppl = intval( $_POST['posts_per_loop'] );
 
+		// get next set of posts
+		global $wpdb;
+		$where_piece[] = $wpdb->prepare( 'p.ID > %d', $last_id );
+		if ( $post_type != 'any' )
+			$where_piece[] = $wpdb->prepare( 'p.post_type = %s', $post_type );
+		if ( $post_status != 'any' )
+			$where_piece[] = $wpdb->prepare( 'p.post_status = %s', $post_status );
 
-global $wpdb;
-// $where = $wpdb->prepare( "WHERE p.ID > %d AND p.post_type = %s AND p.post_status = 'publish'", $last_id, $post_type );
+		$wheres = implode( ' AND ', $where_piece );
+		$where = "WHERE $wheres";
 
-$where_piece[] = $wpdb->prepare( 'p.ID > %d', $last_id );
-if ( $post_type != 'any' )
-	$where_piece[] = $wpdb->prepare( 'p.post_type = %s', $post_type );
-if ( $post_status != 'any' )
-	$where_piece[] = $wpdb->prepare( 'p.post_status = %s', $post_status );
+		$query = "SELECT p.id FROM $wpdb->posts AS p $where ORDER BY ID ASC LIMIT $ppl";
 
-$wheres = implode( ' AND ', $where_piece );
-$where = "WHERE $wheres";
+		$query_key = 'pl_next_post_' . md5($query);
+		$result = wp_cache_get($query_key, 'counts');
+		$result = false;
 
-$query = "SELECT p.id FROM $wpdb->posts AS p $where ORDER BY ID ASC LIMIT 1";
+		if ( false === $result ) {
+			$result = $wpdb->get_results( $query );
+			if ( null === $result )
+				$result = '';
 
-$query_key = 'pl_next_post_' . md5($query);
-$result = wp_cache_get($query_key, 'counts');
-$result = false;
+			wp_cache_set( $query_key, $result, 'counts');
+		}
 
-if ( false === $result ) {
-	$result = $wpdb->get_results( $query );
-	if ( null === $result )
-		$result = '';
-
-	wp_cache_set( $query_key, $result, 'counts');
-}
-
-if ( ! $result )
-	$this->json_die( false, __( 'Could not find next post.', $this->textdomain ) );
-
-$this_post_ = array_shift( $result );
+		if ( ! $result )
+			$this->json_die( false, __( 'Could not find next post.', $this->textdomain ) );
+		//
 
 		global $post;
-		$post = get_post( $this_post_->id );
-		setup_postdata( $post );
-		ob_start();
-		echo '----------------------------------'."\n";
-		echo '['; the_ID(); echo '] '; the_title(); echo "\n";
-		echo '----------------------------------'."\n";
-		$command = $this->loop_command( $_POST['command'] );
-		$command_result = ob_get_clean();
-		wp_reset_postdata();
+		$command_result = '';
+		foreach( $result as $sql_row ) {
 
-		$this->json_die( $this_post_->id, $command_result );
+			$post = get_post( $sql_row->id );
+			setup_postdata( $post );
+			ob_start();
+			echo '----------------------------------'."\n";
+			echo '['; the_ID(); echo '] '; the_title(); echo "\n";
+			echo '----------------------------------'."\n";
+			$command = $this->loop_command( $_POST['command'] );
+			$command_result .= ob_get_clean() ."\n";
+			wp_reset_postdata();
+		}
+
+		$this->json_die( $sql_row->id, $command_result );
 
 	}
 
