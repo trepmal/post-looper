@@ -273,6 +273,8 @@ class Post_Looper {
 		$command = stripslashes( trim( $raw ) );
 		if ( '<?php' == $command ) return;
 		$command = str_replace( '<?php<?php', '<?php', "<?php$command" );
+		// $command = htmlspecialchars_decode( $command );
+		$command = str_replace( '<br />', "\n", $command );
 		// this chunk from the debug bar
 		// http://plugins.svn.wordpress.org/debug-bar-console/tags/0.3/class-debug-bar-console.php
 			// Trim the data
