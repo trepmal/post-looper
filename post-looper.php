@@ -25,7 +25,7 @@ class Post_Looper {
 	}
 
 	function menu() {
-		add_options_page( __( 'Post Looper', $this->textdomain ), __( 'Post Looper', $this->textdomain ), 'edit_posts', __CLASS__, array( &$this, 'page' ) );
+		add_options_page( __( 'Post Looper', $this->textdomain ), __( 'Post Looper', $this->textdomain ), 'manage_options', __CLASS__, array( &$this, 'page' ) );
 	}
 
 	function page() {
