@@ -17,17 +17,22 @@ $post_looper = new Post_Looper();
 
 class Post_Looper {
 
-	var $textdomain = 'post-looper';
-
+	/**
+	 *
+	 */
 	function __construct() {
-		add_action( 'admin_enqueue_scripts', array( &$this, 'admin_enqueue_scripts' ) );
-		add_action( 'admin_menu', array( &$this, 'menu' ) );
-		add_action( 'wp_ajax_pl_loop', array( &$this, 'loop' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
+		add_action( 'admin_menu',            array( $this, 'menu' ) );
+		add_action( 'wp_ajax_pl_loop',       array( $this, 'loop' ) );
 	}
 
+	/**
+	 *
+	 */
 	function admin_enqueue_scripts( $hook ) {
-		echo "<!--hook: $hook -->";
-		if ( 'settings_page_Post_Looper' != $hook ) return;
+		if ( 'settings_page_Post_Looper' != $hook ) {
+			return;
+		}
 		wp_enqueue_script( 'codemirror', plugins_url( 'codemirror/codemirror.js', __FILE__ ), array(), 3.13 );
 		wp_enqueue_script( 'codemirror-clike', plugins_url( 'codemirror/mode/clike.js', __FILE__ ), array('codemirror'), 3.13 );
 		wp_enqueue_script( 'codemirror-css', plugins_url( 'codemirror/mode/css.js', __FILE__ ), array('codemirror'), 3.13 );
@@ -35,26 +40,32 @@ class Post_Looper {
 		wp_enqueue_script( 'codemirror-php', plugins_url( 'codemirror/mode/php.js', __FILE__ ), array('codemirror'), 3.13 );
 		wp_enqueue_style( 'codemirror', plugins_url( 'codemirror/codemirror.css', __FILE__ ) );
 	}
+
+	/**
+	 *
+	 */
 	function menu() {
-		add_options_page( __( 'Post Looper', $this->textdomain ), __( 'Post Looper', $this->textdomain ), 'manage_options', __CLASS__, array( &$this, 'page' ) );
+		add_options_page( __( 'Post Looper', 'post-looper' ), __( 'Post Looper', 'post-looper' ), 'manage_options', __CLASS__, array( $this, 'page' ) );
 	}
 
+	/**
+	 *
+	 */
 	function page() {
-		add_action( 'admin_footer', array( &$this, 'admin_footer' ) );
+		add_action( 'admin_footer', array( $this, 'admin_footer' ) );
 		?><div class="wrap">
-		<h2><?php _e( 'Post Looper', $this->textdomain ); ?></h2>
+		<h2><?php _e( 'Post Looper', 'post-looper' ); ?></h2>
 		<form>
 		<?php
 		$post_types = get_post_types( array( 'public' => true ) );
-		echo '<p><label>'. __( 'Loop through:', $this->textdomain );
+		echo '<p><label>'. __( 'Loop through:', 'post-looper' );
 		if ( count( $post_types ) > 0 ) {
 			echo '<select id="pl-post-type">';
 			echo "<option value=''>--</option>";
-			foreach( $post_types as $_post_type ) {
+			foreach ( $post_types as $_post_type ) {
 				echo "<option value='$_post_type'>$_post_type</option>";
 			}
 			echo "<option value='any'>any</option>";
-			// echo "<option value='asdf'>asdf</option>";
 			echo '</select>';
 		}
 		echo '</label> ';
@@ -64,36 +75,37 @@ class Post_Looper {
 		if ( count( $post_statuses ) > 0 ) {
 			echo '<select id="pl-post-status">';
 			echo "<option value=''>--</option>";
-			foreach( $post_statuses as $_post_status => $_post_status_label ) {
+			foreach ( $post_statuses as $_post_status => $_post_status_label ) {
 				$s = selected( $_post_status, 'publish', false );
 				echo "<option value='$_post_status'$s>$_post_status_label</option>";
 			}
 			echo "<option value='any'>any</option>";
-			// echo "<option value='asdf'>asdf</option>";
 			echo '</select>';
 		}
 		echo '</label>';
-		echo ' <label>'. __( 'Posts per loop:', $this->textdomain ) .'<input type="number" id="pl-ppl" class="small-text" value="10" /></label>';
+		echo ' <label>'. __( 'Posts per loop:', 'post-looper' ) .'<input type="number" id="pl-ppl" class="small-text" value="10" /></label>';
 		echo '</p>';
 		?>
-		<label for="pl-command"><?php _e( 'Command (runs inside the loop):', $this->textdomain ); ?></label>
+		<label for="pl-command"><?php _e( 'Command (runs inside the loop):', 'post-looper' ); ?></label>
 		<textarea id="pl-command" class="large-text" rows="5">&lt;?php</textarea>
 		<input type="hidden" id="pl-last-id" value="0" />
 		<p><?php
-			submit_button( __( 'Go', $this->textdomain ), 'primary', 'pl-submit', false );
+			submit_button( __( 'Go', 'post-looper' ), 'primary', 'pl-submit', false );
 			echo ' ';
-			submit_button( __( 'Pause', $this->textdomain ), 'secondary', 'pl-pause', false );
+			submit_button( __( 'Pause', 'post-looper' ), 'secondary', 'pl-pause', false );
 			echo ' ';
-			submit_button( __( 'Reset', $this->textdomain ), 'secondary', 'pl-reset', false );
-			// submit_button( __( 'Go', $this->textdomain ), 'primary', 'pl-submit' );
+			submit_button( __( 'Reset', 'post-looper' ), 'secondary', 'pl-reset', false );
 		?></p>
 		</form>
-		<?php _e( 'Output:', $this->textdomain ); ?>
+		<?php _e( 'Output:', 'post-looper' ); ?>
 		<textarea id="pl-command-return" class="large-text" rows="2" readonly="readonly" style="background: #555;color: #f3f3f3;font-family: courier;font-size: 13px;"></textarea>
-		<?php submit_button( __( 'Clear output log', $this->textdomain ), 'small', 'pl-clear' ); ?>
+		<?php submit_button( __( 'Clear output log', 'post-looper' ), 'small', 'pl-clear' ); ?>
 		</div><?php
 	}
 
+	/**
+	 *
+	 */
 	function admin_footer() {
 		?><script>
       var editor = CodeMirror.fromTextArea(document.getElementById("pl-command"), {
@@ -119,7 +131,7 @@ class Post_Looper {
 					pause: false,
 					last_id: 0
 				},
-				pl_ays = '<?php _e( 'Are you sure?', $this->textdomain ); ?>';
+				pl_ays = '<?php _e( 'Are you sure?', 'post-looper' ); ?>';
 
 			var pl_reset = function() {
 				pl_status.last_id = 0;
@@ -203,24 +215,34 @@ class Post_Looper {
 		</script><?php
 	}
 
+	/**
+	 *
+	 */
 	function loop() {
-		if ( ! check_ajax_referer( 'post-looper', 'nonce', false ) )
-			$this->json_die( false, __( 'Not allowed', $this->textdomain ) );
+		if ( ! check_ajax_referer( 'post-looper', 'nonce', false ) ) {
+			$this->json_die( false, __( 'Not allowed', 'post-looper' ) );
+		}
 		$post_type = $_POST['post_type'];
-		if ( empty( $post_type ) ) $this->json_die( false, __( 'No post type selected', $this->textdomain ) );
-		if ( ! post_type_exists( $post_type ) && $post_type != 'any' ) $this->json_die( false, __( 'Invalid post type selected', $this->textdomain ) );
+		if ( empty( $post_type ) ) {
+			$this->json_die( false, __( 'No post type selected', 'post-looper' ) );
+		}
+		if ( ! post_type_exists( $post_type ) && $post_type != 'any' ) {
+			$this->json_die( false, __( 'Invalid post type selected', 'post-looper' ) );
+		}
 
 		$post_status = esc_attr( $_POST['post_status'] );
-		$last_id = empty( $_POST['last_id'] ) ? 0 : $_POST['last_id'];
-		$ppl = intval( $_POST['posts_per_loop'] );
+		$last_id     = empty( $_POST['last_id'] ) ? 0 : $_POST['last_id'];
+		$ppl         = intval( $_POST['posts_per_loop'] );
 
 		// get next set of posts
 		global $wpdb;
 		$where_piece[] = $wpdb->prepare( 'p.ID > %d', $last_id );
-		if ( $post_type != 'any' )
+		if ( $post_type != 'any' ) {
 			$where_piece[] = $wpdb->prepare( 'p.post_type = %s', $post_type );
-		if ( $post_status != 'any' )
+		}
+		if ( $post_status != 'any' ) {
 			$where_piece[] = $wpdb->prepare( 'p.post_status = %s', $post_status );
+		}
 
 		$wheres = implode( ' AND ', $where_piece );
 		$where = "WHERE $wheres";
@@ -228,24 +250,26 @@ class Post_Looper {
 		$query = "SELECT p.id FROM $wpdb->posts AS p $where ORDER BY ID ASC LIMIT $ppl";
 
 		$query_key = 'pl_next_post_' . md5($query);
-		$result = wp_cache_get($query_key, 'counts');
+		$result = wp_cache_get( $query_key, 'counts' );
 		$result = false;
 
 		if ( false === $result ) {
 			$result = $wpdb->get_results( $query );
-			if ( null === $result )
+			if ( null === $result ) {
 				$result = '';
+			}
 
 			wp_cache_set( $query_key, $result, 'counts');
 		}
 
-		if ( ! $result )
-			$this->json_die( false, __( 'Could not find next post.', $this->textdomain ) );
+		if ( ! $result ) {
+			$this->json_die( false, __( 'Could not find next post.', 'post-looper' ) );
+		}
 		//
 
 		global $post;
 		$command_result = '';
-		foreach( $result as $sql_row ) {
+		foreach ( $result as $sql_row ) {
 
 			$post = get_post( $sql_row->id );
 			setup_postdata( $post );
@@ -262,16 +286,24 @@ class Post_Looper {
 
 	}
 
+	/**
+	 *
+	 */
 	function json_die( $next, $result ) {
 		die( json_encode( array(
 			'next_post' => $next,
-			'result' => $result,
+			'result'    => $result,
 		) ) );
 	}
 
+	/**
+	 *
+	 */
 	function loop_command( $raw ) {
 		$command = stripslashes( trim( $raw ) );
-		if ( '<?php' == $command ) return;
+		if ( '<?php' == $command ) {
+			return;
+		}
 		$command = str_replace( '<?php<?php', '<?php', "<?php$command" );
 		// $command = htmlspecialchars_decode( $command );
 		$command = str_replace( '<br />', "\n", $command );
@@ -285,8 +317,9 @@ class Post_Looper {
 			$close = strrpos( $command, '?>' );
 
 			// If we're still in PHP, ensure we end with a semicolon.
-			if ( $open > $close )
+			if ( $open > $close ) {
 				$command = rtrim( $command, ';' ) . ';';
+			}
 
 		eval( $command );
 	}
